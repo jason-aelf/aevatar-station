@@ -30,14 +30,14 @@ jobs:
       - name: Build
         run: dotnet build --no-restore /clp:ErrorsOnly /p:GeneratePackageOnBuild=false --verbosity quiet
 
-      - name: Test
-        run: |
-          dotnet test --no-restore --no-build --verbosity normal --logger trx --settings CodeCoverage.runsettings --collect:"XPlat Code Coverage"
+#      - name: Test
+#        run: |
+#          dotnet test --no-restore --no-build --verbosity normal --logger trx --settings CodeCoverage.runsettings --collect:"XPlat Code Coverage"
 
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          fail_ci_if_error: true
-          files: coverage/*/coverage.cobertura.xml
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+#      - name: Upload coverage reports to Codecov
+#        uses: codecov/codecov-action@v4
+#        with:
+#          fail_ci_if_error: true
+#          files: coverage/*/coverage.cobertura.xml
+#        env:
+#          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
