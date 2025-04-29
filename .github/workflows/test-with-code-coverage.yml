@@ -3,6 +3,7 @@ name: Test with code coverage
 on:
   pull_request:
     types: [labeled]
+  workflow_dispatch:
 
 env:
   DOTNET_INSTALL_DIR: "./.dotnet"
