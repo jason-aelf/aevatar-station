@@ -9,6 +9,7 @@ env:
 
 jobs:
   approval-check:
+    if: github.event.review.state == 'approved'
     runs-on: ubuntu-latest
     outputs:
       approved_enough: ${{ steps.check.outputs.approved_enough }}
