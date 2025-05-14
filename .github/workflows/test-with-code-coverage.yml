@@ -26,7 +26,8 @@ jobs:
         run: |
           PR_NUMBER=${{ github.event.pull_request.number }}
           REPO=${{ github.repository }}
-          APPROVED_COUNT=$(gh pr view $PR_NUMBER -R $REPO --json reviews --template '{{range .reviews}}{{.state}}{{"\n"}}{{end}}' | grep -c 'APPROVED')
+          gh pr view $PR_NUMBER -R $REPO --json reviews > reviews.json
+          APPROVED_COUNT=$(jq '[.reviews | group_by(.author.login) | map(.[-1]) | map(select(.state=="APPROVED")) | .[].author.login] | unique | length' reviews.json)
           echo "Approve count: $APPROVED_COUNT"
           if [ "$APPROVED_COUNT" -ge 2 ]; then
             echo "approved_enough=true" >> $GITHUB_OUTPUT
