@@ -1,16 +1,41 @@
 name: Test with code coverage
 
 on:
-  pull_request:
-    types: [labeled]
-  workflow_dispatch:
+  pull_request_review:
+    types: [submitted]
 
 env:
   DOTNET_INSTALL_DIR: "./.dotnet"
 
 jobs:
+  approval-check:
+    runs-on: ephemeral-env-runner
+    outputs:
+      approved_enough: ${{ steps.check.outputs.approved_enough }}
+    steps:
+      - name: Install GitHub CLI
+        run: |
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          sudo apt update
+          sudo apt install gh -y
+      - name: Check Approve Count
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          REPO=${{ github.repository }}
+          APPROVE_COUNT=$(gh pr review-list $PR_NUMBER -R $REPO --json state,author --jq 'group_by(.author.login) | map(.[-1]) | map(select(.state=="APPROVED")) | length')
+          echo "Approve count: $APPROVE_COUNT"
+          if [ "$APPROVE_COUNT" -ge 2 ]; then
+            echo "approved_enough=true" >> $GITHUB_OUTPUT
+          else
+            echo "approved_enough=false" >> $GITHUB_OUTPUT
+          fi
   test:
-    if: github.event.label.name == 'require-regression-test'
+    if: needs.approval-check.outputs.approved_enough == 'true'
+    needs: approval-check
     runs-on: ubuntu-22.04
     permissions:
       pull-requests: write
