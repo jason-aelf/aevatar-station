@@ -39,7 +39,7 @@ jobs:
             fi
           done
           echo "Approve count (with write/admin): $APPROVED_COUNT"
-          if [ "$APPROVED_COUNT" -eq 1 ]; then
+          if [ "$APPROVED_COUNT" -eq 2 ]; then
             echo "approved_enough=true" >> $GITHUB_OUTPUT
           else
             echo "approved_enough=false" >> $GITHUB_OUTPUT
