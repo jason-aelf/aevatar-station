@@ -48,6 +48,7 @@ jobs:
             echo "approved_enough=false" >> $GITHUB_OUTPUT
           fi
   test:
+    needs: approval-check
     runs-on: ubuntu-22.04
     permissions:
       pull-requests: write
