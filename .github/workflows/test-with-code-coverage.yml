@@ -45,8 +45,8 @@ jobs:
             echo "approved_enough=false" >> $GITHUB_OUTPUT
           fi
   test:
-    if: needs.approval-check.outputs.approved_enough == 'true'
     needs: approval-check
+    if: needs.approval-check.outputs.approved_enough == 'true'
     runs-on: ubuntu-22.04
     permissions:
       pull-requests: write
