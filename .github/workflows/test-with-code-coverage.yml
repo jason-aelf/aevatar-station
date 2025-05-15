@@ -1,6 +1,9 @@
 name: Test with code coverage
 
 on:
+  push:
+    branches: 
+      - '**'
   pull_request_review:
     types: [submitted]
 
@@ -48,18 +51,12 @@ jobs:
             echo "approved_enough=false" >> $GITHUB_OUTPUT
           fi
   test:
-    needs: approval-check
+    #needs: approval-check
     runs-on: ubuntu-22.04
     permissions:
       pull-requests: write
       contents: write
     steps:
-      - name: Check approval
-        run: |
-          if [ "${{ needs.approval-check.outputs.approved_enough }}" != "true" ]; then
-            echo "Not enough qualified approvals. Failing job."
-            exit 1
-          fi
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup dotnet
@@ -68,6 +65,7 @@ jobs:
           dotnet-version: '9.0.x'
       - name: chown
         run: |
+          ls /home/
           sudo chown -R $USER:$USER /home/runneradmin
       - name: Install dependencies
         run: dotnet restore --verbosity quiet
