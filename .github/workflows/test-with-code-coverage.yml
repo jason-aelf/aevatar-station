@@ -44,7 +44,6 @@ jobs:
           else
             echo "approved_enough=false" >> $GITHUB_OUTPUT
           fi
-          echo "approved_count=$APPROVED_COUNT" >> $GITHUB_OUTPUT
   test:
     if: needs.approval-check.outputs.approved_enough == 'true'
     needs: approval-check
