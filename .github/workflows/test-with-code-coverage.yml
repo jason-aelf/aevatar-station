@@ -27,9 +27,18 @@ jobs:
         run: |
           PR_NUMBER=${{ github.event.pull_request.number }}
           REPO=${{ github.repository }}
+          OWNER=$(echo "$REPO" | cut -d'/' -f1)
+          REPO_NAME=$(echo "$REPO" | cut -d'/' -f2)
           gh pr view $PR_NUMBER -R $REPO --json reviews > reviews.json
-          APPROVED_COUNT=$(jq '[.reviews | group_by(.author.login) | map(.[-1]) | map(select(.state=="APPROVED")) | .[].author.login] | unique | length' reviews.json)
-          echo "Approve count: $APPROVED_COUNT"
+          jq '[.reviews | group_by(.author.login) | map(.[-1]) | map(select(.state=="APPROVED")) | .[].author.login] | unique' reviews.json > approved_users.json
+          APPROVED_COUNT=0
+          for user in $(jq -r '.[]' approved_users.json); do
+            PERM=$(gh api repos/$OWNER/$REPO_NAME/collaborators/$user/permission --jq '.permission')
+            if [[ "$PERM" == "admin" || "$PERM" == "write" ]]; then
+              APPROVED_COUNT=$((APPROVED_COUNT+1))
+            fi
+          done
+          echo "Approve count (with write/admin): $APPROVED_COUNT"
           if [ "$APPROVED_COUNT" -ge 2 ]; then
             echo "approved_enough=true" >> $GITHUB_OUTPUT
           else
