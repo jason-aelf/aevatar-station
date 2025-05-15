@@ -43,6 +43,7 @@ jobs:
             echo "approved_enough=true" >> $GITHUB_OUTPUT
           else
             echo "approved_enough=false" >> $GITHUB_OUTPUT
+            exit 1
           fi
   test:
     needs: approval-check
