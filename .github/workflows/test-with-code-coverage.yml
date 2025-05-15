@@ -29,6 +29,9 @@ jobs:
           REPO=${{ github.repository }}
           OWNER=$(echo "$REPO" | cut -d'/' -f1)
           REPO_NAME=$(echo "$REPO" | cut -d'/' -f2)
+          BRANCH=${{ github.base_ref }}
+          REQUIRED_APPROVE=$(gh api repos/$OWNER/$REPO_NAME/branches/$BRANCH/protection --jq '.required_pull_request_reviews.required_approving_review_count')
+          echo "Branch $BRANCH requires $REQUIRED_APPROVE approvals"
           gh pr view $PR_NUMBER -R $REPO --json reviews > reviews.json
           jq '[.reviews | group_by(.author.login) | map(.[-1]) | map(select(.state=="APPROVED")) | .[].author.login] | unique' reviews.json > approved_users.json
           APPROVED_COUNT=0
@@ -39,7 +42,7 @@ jobs:
             fi
           done
           echo "Approve count (with write/admin): $APPROVED_COUNT"
-          if [ "$APPROVED_COUNT" -eq 2 ]; then
+          if [ "$APPROVED_COUNT" -eq "$REQUIRED_APPROVE" ]; then
             echo "approved_enough=true" >> $GITHUB_OUTPUT
           else
             echo "approved_enough=false" >> $GITHUB_OUTPUT
