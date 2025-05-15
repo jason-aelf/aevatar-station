@@ -47,12 +47,17 @@ jobs:
           fi
   test:
     needs: approval-check
-    if: needs.approval-check.outputs.approved_enough == 'true'
     runs-on: ubuntu-22.04
     permissions:
       pull-requests: write
       contents: write
     steps:
+      - name: Check approval
+        run: |
+          if [ "${{ needs.approval-check.outputs.approved_enough }}" != "true" ]; then
+            echo "Not enough qualified approvals. Failing job."
+            exit 1
+          fi
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup dotnet
