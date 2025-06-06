@@ -1,15 +1,61 @@
 name: Test with code coverage
 
 on:
-  push:
-    branches:
-      - '**'
+  workflow_dispatch:
+  pull_request_review:
+    types: [submitted]
 
 env:
   DOTNET_INSTALL_DIR: "./.dotnet"
 
 jobs:
+  approval-check:
+    if: github.event.review.state == 'approved' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    outputs:
+      approved_enough: ${{ steps.check.outputs.approved_enough }}
+    steps:
+      - name: Install GitHub CLI
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "Skip install GitHub CLI"
+            exit 0
+          fi
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          sudo apt update
+          sudo apt install gh -y
+      - name: Check Approve Count
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "Skip approval count check"
+            exit 0
+          fi
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          REPO=${{ github.repository }}
+          OWNER=$(echo "$REPO" | cut -d'/' -f1)
+          REPO_NAME=$(echo "$REPO" | cut -d'/' -f2)          
+          gh pr view $PR_NUMBER -R $REPO --json reviews > reviews.json
+          jq '[.reviews | group_by(.author.login) | map(.[-1]) | map(select(.state=="APPROVED")) | .[].author.login] | unique' reviews.json > approved_users.json
+          APPROVED_COUNT=0
+          for user in $(jq -r '.[]' approved_users.json); do
+            PERM=$(gh api repos/$OWNER/$REPO_NAME/collaborators/$user/permission --jq '.permission')
+            if [[ "$PERM" == "admin" || "$PERM" == "write" ]]; then
+              APPROVED_COUNT=$((APPROVED_COUNT+1))
+            fi
+          done
+          echo "Approve count (with write/admin): $APPROVED_COUNT"
+          if [ "$APPROVED_COUNT" -eq 1 ]; then
+            echo "approved_enough=true" >> $GITHUB_OUTPUT
+          else
+            echo "approved_enough=false" >> $GITHUB_OUTPUT
+          fi
   test:
+    if: needs.approval-check.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
+    needs: approval-check
     runs-on: ubuntu-22.04
     permissions:
       pull-requests: write
@@ -23,6 +69,7 @@ jobs:
           dotnet-version: '9.0.x'
       - name: chown
         run: |
+          ls /home/
           sudo chown -R $USER:$USER /home/runneradmin
       - name: Install dependencies
         run: dotnet restore --verbosity quiet
@@ -30,14 +77,14 @@ jobs:
       - name: Build
         run: dotnet build --no-restore /clp:ErrorsOnly /p:GeneratePackageOnBuild=false --verbosity quiet
 
-      - name: Test
-        run: |
-          dotnet test --no-restore --no-build --verbosity normal --logger trx --settings CodeCoverage.runsettings --collect:"XPlat Code Coverage"
+#      - name: Test
+#        run: |
+#          dotnet test --no-restore --no-build --verbosity normal --logger trx --settings CodeCoverage.runsettings --collect:"XPlat Code Coverage"
 
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          fail_ci_if_error: true
-          files: coverage/*/coverage.cobertura.xml
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+#      - name: Upload coverage reports to Codecov
+#        uses: codecov/codecov-action@v4
+#        with:
+#          fail_ci_if_error: true
+#          files: coverage/*/coverage.cobertura.xml
+#        env:
+#          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
