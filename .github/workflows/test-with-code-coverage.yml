@@ -1,13 +1,17 @@
 name: Test with code coverage
 
 on:
-  workflow_dispatch
+  workflow_dispatch:
+  push:
+    branches:
+      - '**'
 
 env:
   DOTNET_INSTALL_DIR: "./.dotnet"
 
 jobs:
   approval-check:
+    if: github.event.review.state == 'approved' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     outputs:
       approved_enough: ${{ steps.check.outputs.approved_enough }}
@@ -23,8 +27,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ "${{ github.event.review.state }}" != "approved" ]; then
-            echo "Review state is not approved"
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            echo "Skip approval check"
             exit 0
           fi
           PR_NUMBER=${{ github.event.pull_request.number }}
@@ -47,7 +51,8 @@ jobs:
             echo "approved_enough=false" >> $GITHUB_OUTPUT
           fi
   test:
-    #needs: approval-check
+    if: needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
+    needs: approval-check
     runs-on: ubuntu-22.04
     permissions:
       pull-requests: write
