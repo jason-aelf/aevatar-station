@@ -1,11 +1,7 @@
 name: Test with code coverage
 
 on:
-  push:
-    branches: 
-      - '**'
-  pull_request_review:
-    types: [submitted]
+  workflow_dispatch
 
 env:
   DOTNET_INSTALL_DIR: "./.dotnet"
