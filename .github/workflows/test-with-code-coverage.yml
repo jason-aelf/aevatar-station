@@ -2,9 +2,8 @@ name: Test with code coverage
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - '**'
+  pull_request_review:
+    types: [submitted]
 
 env:
   DOTNET_INSTALL_DIR: "./.dotnet"
@@ -18,6 +17,10 @@ jobs:
     steps:
       - name: Install GitHub CLI
         run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "Skip install GitHub CLI"
+            exit 0
+          fi
           curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
           echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
           sudo apt update
@@ -27,8 +30,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
-            echo "Skip approval check"
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "Skip approval count check"
             exit 0
           fi
           PR_NUMBER=${{ github.event.pull_request.number }}
